@@ -1,0 +1,108 @@
+"use client";
+
+import { cn } from "@/lib/utils";
+import { User, Sparkles } from "lucide-react";
+import ReactMarkdown, { Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+interface MessageProps {
+  role: "user" | "assistant";
+  content: string;
+  isStreaming?: boolean;
+}
+
+const markdownComponents: Components = {
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  ul: ({ children }) => <ul className="mb-2 list-disc pl-4">{children}</ul>,
+  ol: ({ children }) => <ol className="mb-2 list-decimal pl-4">{children}</ol>,
+  li: ({ children }) => <li className="mb-1">{children}</li>,
+  code: ({ className, children, ...props }) => {
+    const isInline = !className;
+    if (isInline) {
+      return (
+        <code className="bg-muted rounded px-1 py-0.5 text-sm" {...props}>
+          {children}
+        </code>
+      );
+    }
+    return (
+      <code
+        className={cn(
+          "bg-muted block overflow-x-auto rounded-lg p-3 text-sm",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </code>
+    );
+  },
+  pre: ({ children }) => (
+    <pre className="bg-muted mb-2 overflow-x-auto rounded-lg">{children}</pre>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-primary hover:underline"
+    >
+      {children}
+    </a>
+  ),
+  blockquote: ({ children }) => (
+    <blockquote className="border-primary/50 mb-2 border-l-2 pl-3 italic">
+      {children}
+    </blockquote>
+  ),
+};
+
+export function Message({ role, content, isStreaming }: MessageProps) {
+  const isUser = role === "user";
+
+  return (
+    <div
+      className={cn(
+        "flex w-full gap-2 px-4 py-3",
+        isUser ? "justify-end" : "justify-start",
+      )}
+    >
+      {!isUser && (
+        <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
+          <Sparkles className="size-5" />
+        </div>
+      )}
+
+      <div
+        className={cn(
+          "max-w-[75%] rounded-2xl px-4 py-2",
+          isUser
+            ? "bg-primary text-primary-foreground rounded-tr-sm"
+            : "bg-muted text-foreground rounded-tl-sm",
+        )}
+      >
+        {isUser ? (
+          <p className="whitespace-pre-wrap">{content}</p>
+        ) : (
+          <div className="prose prose-sm dark:prose-invert max-w-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
+              {content}
+            </ReactMarkdown>
+            {isStreaming && (
+              <span className="bg-primary ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm" />
+            )}
+          </div>
+        )}
+      </div>
+
+      {isUser && (
+        <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-full">
+          <User className="size-5" />
+        </div>
+      )}
+    </div>
+  );
+}
