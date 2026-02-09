@@ -81,6 +81,10 @@ export function Message({ role, content, isStreaming }: MessageProps) {
     }
   };
 
+  const handleEditSave = (editedText: string) => {
+    console.log(editedText);
+  };
+
   return (
     <div className={cn("flex flex-col w-full")}>
       <div
@@ -97,32 +101,54 @@ export function Message({ role, content, isStreaming }: MessageProps) {
 
         <div
           className={cn(
-            "max-w-[75%] rounded-xl px-4 py-2",
+            "rounded-xl p-4",
             isUser
               ? "bg-primary text-primary-foreground rounded-tr-sm"
               : "bg-muted text-foreground rounded-tl-sm",
+            isEditing ? "max-w-full bg-transparent w-full p-0" : "max-w-[75%]",
           )}
         >
           {isUser ? (
             <>
               {isEditing ? (
-                <div></div>
+                <div className="flex flex-col gap-2">
+                  <Textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="max-h-40 min-h-20 h-30"
+                  />
+
+                  <div className="flex items-center justify-end gap-2 mb-2">
+                    <Button variant="ghost" onClick={() => setIsEditint(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={() => handleEditSave(editText)}>
+                      Save
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <p className="whitespace-pre-wrap">{content}</p>
               )}
             </>
           ) : (
-            <div className="prose prose-sm dark:prose-invert max-w-none">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={markdownComponents}
-              >
-                {content}
-              </ReactMarkdown>
-              {isStreaming && (
-                <span className="bg-primary ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm" />
+            <>
+              {isEditing ? (
+                <></>
+              ) : (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={markdownComponents}
+                  >
+                    {content}
+                  </ReactMarkdown>
+                  {isStreaming && (
+                    <span className="bg-primary ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm" />
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
@@ -135,8 +161,9 @@ export function Message({ role, content, isStreaming }: MessageProps) {
 
       <div
         className={cn(
-          "flex gap-2 items-center mt-2 px-2",
+          "flex gap-2 items-center px-2 my-2",
           isUser ? "justify-end md:mr-12" : "justify-start md:ml-12",
+          isEditing && "hidden",
         )}
       >
         <Button variant="ghost" size="icon" onClick={() => setIsEditint(true)}>
