@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Message } from "./message";
-import { TypingIndicator } from "./typing-indicator";
+import React from "react";
+import { Message } from "@/components/chat/message";
+import { TypingIndicator } from "@/components/chat/typing-indicator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface ChatMessage {
@@ -22,11 +22,10 @@ export function MessagesList({
   isStreaming,
   streamingContent,
 }: MessagesListProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const bottomRef = React.useRef<HTMLDivElement>(null);
 
-  // Автоскролл при новых сообщениях
-  useEffect(() => {
+  React.useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
 
@@ -35,8 +34,8 @@ export function MessagesList({
   }
 
   return (
-    <ScrollArea className="flex-1" ref={scrollRef}>
-      <div className="mx-auto max-w-3xl py-4">
+    <ScrollArea className="flex-1 overflow-y-scroll" ref={scrollRef}>
+      <div className="mx-auto max-w-3xl py-10">
         {messages.map((message) => (
           <Message
             key={message.id}
@@ -57,6 +56,8 @@ export function MessagesList({
 
         <div ref={bottomRef} />
       </div>
+      <div className="absolute top-0 to-background w-full h-10 bg-linear-to-t" />
+      <div className="absolute bottom-0 from-background w-full h-10 bg-linear-to-t" />
     </ScrollArea>
   );
 }

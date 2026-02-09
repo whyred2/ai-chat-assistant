@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { mistral } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompts/system";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -151,5 +151,90 @@ export async function POST(request: NextRequest) {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const sessionId = request.headers.get("X-Session-Id");
+
+  if (!sessionId) {
+    return NextResponse.json(
+      { error: "Session ID is required" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const { chatId } = await request.json();
+
+    if (!chatId) {
+      return NextResponse.json(
+        { error: "Chat ID is required" },
+        { status: 400 },
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { sessionId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    await prisma.chat.delete({
+      where: { id: chatId, userId: user.id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to delete chat: ", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  const sessionId = request.headers.get("X-Session-Id");
+
+  if (!sessionId) {
+    return NextResponse.json(
+      { error: "Session ID is required" },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const { chatId, title } = await request.json();
+
+    if (!chatId) {
+      return NextResponse.json(
+        { error: "Chat ID is required" },
+        { status: 400 },
+      );
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { sessionId },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    await prisma.chat.update({
+      where: { id: chatId },
+      data: { title: title },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error updating chat:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

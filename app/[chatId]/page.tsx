@@ -33,7 +33,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   };
 
   return (
-    <div className="bg-background relative flex h-full w-full flex-col">
+    <div className=" bg-background relative flex h-full w-full flex-col">
       <Header />
 
       <MessagesList

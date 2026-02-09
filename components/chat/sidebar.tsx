@@ -15,6 +15,8 @@ import {
   SquarePen,
   X,
   Trash,
+  Loader2,
+  Pen,
 } from "lucide-react";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,23 +24,81 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { SettingsDialog } from "../settings";
 import { useChat } from "@/components/providers/chat-provider";
 import { useSession } from "@/components/providers/session-provider";
+import { toast } from "react-toastify";
+import { Input } from "../ui/input";
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { chats, isLoadingChats } = useChat();
-  const { user } = useSession();
+  const { chats, isLoadingChats, refreshChats } = useChat();
+  const { user, sessionId } = useSession();
 
   const [isCollapsed, setIsCollapsed] = React.useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState<boolean>(false);
   const [isSettingsOpen, setIsSettingsOpen] = React.useState<boolean>(false);
+  const [isChatRenameOpen, setIsChatRenameOpen] =
+    React.useState<boolean>(false);
+  const [selectedChatId, setSelectedChatId] = React.useState<string>("");
+  const [title, setTitle] = React.useState<string>("");
   const sidebarRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!isChatRenameOpen) {
+      setTitle("");
+    }
+  }, [isChatRenameOpen]);
+
+  const deleteChat = async (chatId: string) => {
+    if (!sessionId) return;
+    const response = await fetch(`/api/chat`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-Id": sessionId,
+      },
+      body: JSON.stringify({ chatId }),
+    });
+
+    if (response.ok) {
+      toast.success("Chat deleted");
+      refreshChats();
+    } else {
+      toast.error("Failed deleting chat");
+    }
+  };
+
+  const renameChat = async (chatId: string, title: string) => {
+    if (!sessionId) return;
+    const response = await fetch("/api/chat", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-Id": sessionId,
+      },
+      body: JSON.stringify({ chatId, title }),
+    });
+
+    if (response.ok) {
+      toast.success("Chat renamed");
+      setIsChatRenameOpen(false);
+      refreshChats();
+    } else {
+      toast.error("Chat renaming error");
+    }
+  };
 
   return (
     <>
@@ -109,14 +169,16 @@ export function Sidebar() {
 
         {/* Chats list - only when expanded */}
         {!isCollapsed ? (
-          <ScrollArea className="flex-1 overflow-y-scroll px-2">
-            <div className="space-y-1 py-2">
+          <ScrollArea className="flex-1 overflow-y-scroll ">
+            <div className="p-2 space-y-2">
               {isLoadingChats ? (
-                <p className="text-muted-foreground px-2 text-sm">
-                  Загрузка...
-                </p>
+                <div className="flex items-center justify-center h-20 w-full">
+                  <Loader2 className="animate-spin" />
+                </div>
               ) : chats.length === 0 ? (
-                <p className="text-muted-foreground px-2 text-sm">Нет чатов</p>
+                <p className="text-muted-foreground text-sm text-center mt-10">
+                  No chats
+                </p>
               ) : (
                 chats.map((chat) => {
                   const isActive = pathname === `/${chat.id}`;
@@ -136,15 +198,24 @@ export function Sidebar() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className={cn("w-full size-8")}
-                          >
+                          <Button variant="ghost" className="w-full size-8">
                             <EllipsisVertical className="size-5" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem variant="destructive">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setIsChatRenameOpen(true);
+                              setSelectedChatId(chat.id);
+                            }}
+                          >
+                            <Pen />
+                            <span>Rename</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => deleteChat(chat.id)}
+                          >
                             <Trash />
                             <span>Delete</span>
                           </DropdownMenuItem>
@@ -199,6 +270,25 @@ export function Sidebar() {
 
       {/* Dialogs */}
       <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <Dialog open={isChatRenameOpen} onOpenChange={setIsChatRenameOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change the chat name</DialogTitle>
+          </DialogHeader>
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              type="submit"
+              onClick={() => renameChat(selectedChatId, title)}
+            >
+              Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

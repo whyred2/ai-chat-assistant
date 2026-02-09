@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
@@ -56,18 +56,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { sessionId, refetchUser } = useSession();
 
   const [activeSection, setActiveSection] =
-    useState<SettingsSection>("general");
-  const [appearance, setAppearance] = useState(theme || "system");
+    React.useState<SettingsSection>("general");
+  const [appearance, setAppearance] = React.useState(theme || "system");
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-  const [deletingChats, setDeletingChats] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [profile, setProfile] = React.useState<UserProfile | null>(null);
+  const [loadingProfile, setLoadingProfile] = React.useState<boolean>(false);
+  const [deletingChats, setDeletingChats] = React.useState<boolean>(false);
+  const [showDeleteDialog, setShowDeleteDialog] =
+    React.useState<boolean>(false);
 
   // AI Settings
-  const [enableSummarization, setEnableSummarization] = useState(true);
-  const [messageHistoryLimit, setMessageHistoryLimit] = useState(20);
-  const [loadingAISettings, setLoadingAISettings] = useState(false);
+  const [enableSummarization, setEnableSummarization] =
+    React.useState<boolean>(true);
+  const [messageHistoryLimit, setMessageHistoryLimit] =
+    React.useState<number>(20);
+  const [loadingAISettings, setLoadingAISettings] =
+    React.useState<boolean>(false);
 
   const sections = [
     { id: "general" as const, label: "General", icon: SettingsIcon },
@@ -76,13 +80,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     { id: "data" as const, label: "Data", icon: Database },
   ];
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (open) {
       setAppearance(theme || "system");
     }
   }, [open, theme]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (open && sessionId && activeSection === "persona") {
       fetchProfile();
     }

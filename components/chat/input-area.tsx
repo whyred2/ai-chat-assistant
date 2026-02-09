@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import React from "react";
 import { SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,10 +10,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSession } from "@/components/providers/session-provider";
 
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSession } from "@/components/providers/session-provider";
 
 interface ChatInputAreaProps {
   onSendMessage: (message: string) => void;
@@ -27,55 +27,26 @@ export function ChatInputArea({
   isStreaming = false,
 }: ChatInputAreaProps) {
   const isMobile = useIsMobile();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const textareaContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const textareaContainerRef = React.useRef<HTMLDivElement>(null);
 
   const { user, isLoading } = useSession();
-  const [input, setInput] = useState("");
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [input, setInput] = React.useState<string>("");
+  const [selectedModel, setSelectedModel] = React.useState<string | null>(null);
 
-  // Character limit for warning
   const MAX_CHARS = 1000;
   const WARNING_THRESHOLD = 800;
 
-  // Используем выбранную модель или preferredModel пользователя
   const currentModel =
     selectedModel || user?.preferredModel || "mistral-small-latest";
-
-  // Обновление высоты textarea контейнера через CSS-переменную
-  useEffect(() => {
-    let rafId: number | null = null;
-
-    const updateHeight = () => {
-      if (rafId) cancelAnimationFrame(rafId);
-
-      rafId = requestAnimationFrame(() => {
-        const container = textareaContainerRef.current;
-        if (container) {
-          const height = container.offsetHeight;
-          const root = document.documentElement as HTMLElement;
-          root.style.setProperty("--textarea-height", `${height}px`);
-        }
-      });
-    };
-
-    const resizeObserver = new ResizeObserver(updateHeight);
-    if (textareaContainerRef.current) {
-      resizeObserver.observe(textareaContainerRef.current);
-    }
-
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-      resizeObserver.disconnect();
-    };
-  }, []);
 
   const handleContainerClick = () => {
     textareaRef.current?.focus();
   };
 
   const handleSend = () => {
-    if (!input.trim() || isStreaming || isLoading) return;
+    if (!input.trim() || isStreaming || isLoading || input.length > 1000)
+      return;
 
     onSendMessage(input);
     setInput("");
@@ -90,11 +61,11 @@ export function ChatInputArea({
 
   const handleModelChange = (model: string) => {
     setSelectedModel(model);
-    // TODO: можно сохранять в БД через API
+    // TODO: сохранять в БД через API
   };
 
   return (
-    <div className="pointer-events-none absolute bottom-0 w-full flex-none px-2 pb-2">
+    <div className="pointer-events-none w-full flex-none pb-2 px-2">
       {/* Поле сообщения */}
       <div
         ref={textareaContainerRef}

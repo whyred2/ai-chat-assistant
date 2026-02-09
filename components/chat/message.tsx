@@ -1,9 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { User, Sparkles } from "lucide-react";
+import { User, Sparkles, Copy, Pen } from "lucide-react";
 import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Button } from "../ui/button";
 
 interface MessageProps {
   role: "user" | "assistant";
@@ -61,48 +62,64 @@ export function Message({ role, content, isStreaming }: MessageProps) {
   const isUser = role === "user";
 
   return (
-    <div
-      className={cn(
-        "flex w-full gap-2 px-4 py-3",
-        isUser ? "justify-end" : "justify-start",
-      )}
-    >
-      {!isUser && (
-        <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
-          <Sparkles className="size-5" />
-        </div>
-      )}
-
+    <div className={cn("flex flex-col w-full ")}>
       <div
         className={cn(
-          "max-w-[75%] rounded-2xl px-4 py-2",
-          isUser
-            ? "bg-primary text-primary-foreground rounded-tr-sm"
-            : "bg-muted text-foreground rounded-tl-sm",
+          "flex w-full gap-2 px-4 py-3",
+          isUser ? "justify-end" : "justify-start",
         )}
       >
-        {isUser ? (
-          <p className="whitespace-pre-wrap">{content}</p>
-        ) : (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={markdownComponents}
-            >
-              {content}
-            </ReactMarkdown>
-            {isStreaming && (
-              <span className="bg-primary ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm" />
-            )}
+        {!isUser && (
+          <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
+            <Sparkles className="size-6" />
+          </div>
+        )}
+
+        <div
+          className={cn(
+            "max-w-[75%] rounded-2xl px-4 py-2",
+            isUser
+              ? "bg-primary text-primary-foreground rounded-tr-sm"
+              : "bg-muted text-foreground rounded-tl-sm",
+          )}
+        >
+          {isUser ? (
+            <p className="whitespace-pre-wrap">{content}</p>
+          ) : (
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={markdownComponents}
+              >
+                {content}
+              </ReactMarkdown>
+              {isStreaming && (
+                <span className="bg-primary ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm" />
+              )}
+            </div>
+          )}
+        </div>
+
+        {isUser && (
+          <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-full">
+            <User className="size-6" />
           </div>
         )}
       </div>
 
-      {isUser && (
-        <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-full">
-          <User className="size-5" />
-        </div>
-      )}
+      <div
+        className={cn(
+          "flex gap-2 items-center",
+          isUser ? "justify-end" : "justify-start",
+        )}
+      >
+        <Button variant="ghost" size="icon">
+          <Pen className="size-4" />
+        </Button>
+        <Button variant="ghost" size="icon">
+          <Copy className="size-4" />
+        </Button>
+      </div>
     </div>
   );
 }
