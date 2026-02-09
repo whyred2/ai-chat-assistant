@@ -1,33 +1,21 @@
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Loader2, Crown, Brain } from "lucide-react";
-
-import { cn } from "@/lib/utils";
-
-interface UserProfile {
-  role: "USER" | "PREMIUM" | "ADMIN";
-}
+import { Loader2 } from "lucide-react";
 
 interface AISettingsProps {
-  profile: UserProfile | null;
   loading: boolean;
-  enableRAG: boolean;
   enableSummarization: boolean;
   messageHistoryLimit: number;
-  onEnableRAGChange: (enabled: boolean) => void;
   onEnableSummarizationChange: (enabled: boolean) => void;
   onMessageHistoryLimitChange: (limit: number) => void;
   onMessageHistoryLimitCommit: (limit: number) => void;
 }
 
 export function AISettings({
-  profile,
   loading,
-  enableRAG,
   enableSummarization,
   messageHistoryLimit,
-  onEnableRAGChange,
   onEnableSummarizationChange,
   onMessageHistoryLimitChange,
   onMessageHistoryLimitCommit,
@@ -47,33 +35,12 @@ export function AISettings({
         </div>
       ) : (
         <div className="space-y-6">
-          {/* RAG Toggle */}
-          <div className="flex items-center justify-between border-b pb-4">
-            <div className="space-y-1">
-              <Label htmlFor="rag-toggle" className="text-base font-medium">
-                Semantic Search (RAG)
-              </Label>
-              <p className="text-muted-foreground text-sm">
-                Use vector search to find relevant memories from past
-                conversations
-              </p>
-            </div>
-            <Switch
-              id="rag-toggle"
-              checked={enableRAG}
-              onCheckedChange={onEnableRAGChange}
-            />
-          </div>
-
           {/* Summarization Toggle */}
           <div className="flex items-center justify-between border-b pb-4">
             <div className="space-y-1">
               <Label
                 htmlFor="summarization-toggle"
-                className={cn(
-                  "text-base font-medium",
-                  profile?.role === "USER" && "text-muted-foreground",
-                )}
+                className="text-base font-medium"
               >
                 Conversation Summarization
               </Label>
@@ -85,21 +52,17 @@ export function AISettings({
             <Switch
               id="summarization-toggle"
               checked={enableSummarization}
-              disabled={profile?.role === "USER"}
               onCheckedChange={onEnableSummarizationChange}
             />
           </div>
 
           {/* Message History Limit */}
-          <div className="space-y-4 border-b pb-4">
+          <div className="space-y-4">
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <Label
                   htmlFor="history-limit"
-                  className={cn(
-                    "text-base font-medium",
-                    profile?.role === "USER" && "text-muted-foreground",
-                  )}
+                  className="text-base font-medium"
                 >
                   Message History Limit
                 </Label>
@@ -116,7 +79,6 @@ export function AISettings({
               min={10}
               max={100}
               step={10}
-              disabled={profile?.role === "USER"}
               value={[messageHistoryLimit]}
               onValueChange={([value]) => onMessageHistoryLimitChange(value)}
               onValueCommit={([value]) => onMessageHistoryLimitCommit(value)}
@@ -133,23 +95,6 @@ export function AISettings({
               <span>80</span>
               <span>90</span>
               <span>100</span>
-            </div>
-          </div>
-
-          {/* Info Banner */}
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
-            <div className="flex gap-3">
-              <Brain className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Smart AI Memory
-                </p>
-                <p className="text-xs text-blue-800 dark:text-blue-200">
-                  Combination of RAG, summarization, and history allows AI to
-                  remember important details of your conversations and provide
-                  more personalized responses.
-                </p>
-              </div>
             </div>
           </div>
         </div>

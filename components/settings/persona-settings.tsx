@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Loader2, Save } from "lucide-react";
 
 import { showToast } from "@/lib/toast";
@@ -15,22 +17,35 @@ interface PersonaSettingsProps {
   profile: UserProfile | null;
   loading: boolean;
   onRefresh: () => void;
+  sessionId: string | null;
+  onProfileUpdate: () => void;
 }
 
 export function PersonaSettings({
   profile,
   loading,
   onRefresh,
+  sessionId,
+  onProfileUpdate,
 }: PersonaSettingsProps) {
   const [persona, setPersona] = useState(profile?.persona || "");
   const [isSaving, setIsSaving] = useState(false);
 
+  // Sync with profile when it changes
+  useEffect(() => {
+    setPersona(profile?.persona || "");
+  }, [profile]);
+
   const handleSavePersona = async () => {
+    if (!sessionId) return;
     setIsSaving(true);
     try {
       const response = await fetch("/api/user/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": sessionId,
+        },
         body: JSON.stringify({ persona: persona.trim() }),
       });
 
@@ -40,6 +55,7 @@ export function PersonaSettings({
 
       showToast.success("User persona saved successfully!");
       onRefresh();
+      onProfileUpdate();
     } catch (error) {
       console.error("Error saving persona:", error);
       showToast.error("Failed to save user persona");
@@ -81,7 +97,7 @@ export function PersonaSettings({
               </span>
               <Button
                 onClick={handleSavePersona}
-                disabled={isSaving || isUnchanged}
+                disabled={isSaving || isUnchanged || !sessionId}
                 size="sm"
               >
                 {isSaving ? (
@@ -97,6 +113,18 @@ export function PersonaSettings({
                 )}
               </Button>
             </div>
+          </div>
+
+          <div className="flex items-center justify-between py-4">
+            <div className="space-y-1">
+              <Label htmlFor="persona-toggle" className="text-base font-medium">
+                Use User Persona
+              </Label>
+              <p className="text-muted-foreground text-sm">
+                Use your persona to personalize AI responses
+              </p>
+            </div>
+            <Switch id="persona-toggle" />
           </div>
         </div>
       )}

@@ -5,6 +5,8 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
+import { useSession } from "@/components/providers/session-provider";
+
 import {
   Dialog,
   DialogContent,
@@ -24,9 +26,7 @@ import {
 import {
   Settings as SettingsIcon,
   Database,
-  User,
   Brain,
-  CreditCard,
   UserRound,
 } from "lucide-react";
 
@@ -37,27 +37,12 @@ import { PersonaSettings } from "./persona-settings";
 
 import { cn } from "@/lib/utils";
 
-type SettingsSection =
-  | "general"
-  | "ai"
-  | "data"
-  | "account"
-  | "subscription"
-  | "persona";
+type SettingsSection = "general" | "ai" | "data" | "persona";
 
 interface UserProfile {
   id: string;
   name: string | null;
-  email: string;
-  emailVerified: Date | null;
-  image: string | null;
-  role: "USER" | "PREMIUM" | "ADMIN";
-  credits: number;
-  isBanned: boolean;
   persona?: string | null;
-  createdAt: string;
-  subscriptionStatus: string | null;
-  subscriptionPeriodEnd: string | null;
 }
 
 interface SettingsDialogProps {
@@ -68,6 +53,7 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { sessionId, refetchUser } = useSession();
 
   const [activeSection, setActiveSection] =
     useState<SettingsSection>("general");
@@ -80,8 +66,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   // AI Settings
   const [enableSummarization, setEnableSummarization] = useState(true);
-  const [enableRAG, setEnableRAG] = useState(true);
-  const [messageHistoryLimit, setMessageHistoryLimit] = useState(50);
+  const [messageHistoryLimit, setMessageHistoryLimit] = useState(20);
   const [loadingAISettings, setLoadingAISettings] = useState(false);
 
   const sections = [
@@ -98,19 +83,21 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   }, [open, theme]);
 
   useEffect(() => {
-    if (open && activeSection === "persona") {
+    if (open && sessionId && activeSection === "persona") {
       fetchProfile();
     }
-    if (open && activeSection === "ai") {
-      fetchProfile();
+    if (open && sessionId && activeSection === "ai") {
       fetchAISettings();
     }
-  }, [open, activeSection]);
+  }, [open, sessionId, activeSection]);
 
   const fetchProfile = async () => {
+    if (!sessionId) return;
     setLoadingProfile(true);
     try {
-      const response = await fetch("/api/user/profile");
+      const response = await fetch("/api/user/profile", {
+        headers: { "X-Session-Id": sessionId },
+      });
       if (response.ok) {
         const data = await response.json();
         setProfile(data);
@@ -123,13 +110,15 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   };
 
   const fetchAISettings = async () => {
+    if (!sessionId) return;
     setLoadingAISettings(true);
     try {
-      const response = await fetch("/api/user/ai-settings");
+      const response = await fetch("/api/user/ai-settings", {
+        headers: { "X-Session-Id": sessionId },
+      });
       if (response.ok) {
         const data = await response.json();
         setEnableSummarization(data.enableSummarization);
-        setEnableRAG(data.enableRAG);
         setMessageHistoryLimit(data.messageHistoryLimit);
       }
     } catch (error) {
@@ -139,16 +128,21 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     }
   };
 
-  const updateAISettings = async (updates: any) => {
+  const updateAISettings = async (updates: Record<string, unknown>) => {
+    if (!sessionId) return;
     try {
       const response = await fetch("/api/user/ai-settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": sessionId,
+        },
         body: JSON.stringify(updates),
       });
 
       if (response.ok) {
         toast.success("AI settings saved successfully");
+        refetchUser();
       } else {
         toast.error("Failed to save AI settings");
       }
@@ -164,11 +158,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   };
 
   const handleDeleteAllChats = async () => {
+    if (!sessionId) return;
     setShowDeleteDialog(false);
     setDeletingChats(true);
     try {
       const response = await fetch("/api/chat/delete-all", {
         method: "DELETE",
+        headers: { "X-Session-Id": sessionId },
       });
 
       if (response.ok) {
@@ -186,9 +182,12 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   };
 
   const handleExportData = async () => {
+    if (!sessionId) return;
     toast.info("Export started");
     try {
-      const response = await fetch("/api/user/export");
+      const response = await fetch("/api/user/export", {
+        headers: { "X-Session-Id": sessionId },
+      });
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -255,15 +254,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
               {activeSection === "ai" && (
                 <AISettings
-                  profile={profile}
                   loading={loadingAISettings}
-                  enableRAG={enableRAG}
                   enableSummarization={enableSummarization}
                   messageHistoryLimit={messageHistoryLimit}
-                  onEnableRAGChange={(checked) => {
-                    setEnableRAG(checked);
-                    updateAISettings({ enableRAG: checked });
-                  }}
                   onEnableSummarizationChange={(checked) => {
                     setEnableSummarization(checked);
                     updateAISettings({ enableSummarization: checked });
@@ -288,6 +281,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   profile={profile}
                   loading={loadingProfile}
                   onRefresh={fetchProfile}
+                  sessionId={sessionId}
+                  onProfileUpdate={refetchUser}
                 />
               )}
             </main>

@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import {
   ChevronsUpDown,
   Menu,
-  MessageSquare,
+  EllipsisVertical,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
   SquarePen,
   X,
+  Trash,
 } from "lucide-react";
 import Link from "next/link";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -120,19 +121,36 @@ export function Sidebar() {
                 chats.map((chat) => {
                   const isActive = pathname === `/${chat.id}`;
                   return (
-                    <Button
-                      key={chat.id}
-                      asChild
-                      variant={isActive ? "secondary" : "ghost"}
-                      className="w-full justify-start"
-                    >
-                      <Link href={`/${chat.id}`}>
-                        <MessageSquare className="size-4 shrink-0" />
-                        <span className="truncate">
-                          {chat.title || "Новый чат"}
-                        </span>
-                      </Link>
-                    </Button>
+                    <div key={chat.id} className="flex items-center gap-2">
+                      <Button
+                        asChild
+                        variant={isActive ? "secondary" : "ghost"}
+                        className="flex-1 justify-start h-8"
+                      >
+                        <Link href={`/${chat.id}`}>
+                          <span className="truncate">
+                            {chat.title || "Новый чат"}
+                          </span>
+                        </Link>
+                      </Button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className={cn("w-full size-8")}
+                          >
+                            <EllipsisVertical className="size-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem variant="destructive">
+                            <Trash />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   );
                 })
               )}
@@ -170,15 +188,6 @@ export function Sidebar() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel asChild>
-                <button className="hover:bg-accent flex w-full cursor-pointer flex-col space-y-1 rounded-sm p-2 transition-colors">
-                  <p className="text-left text-sm leading-none font-medium">
-                    {user?.name || "User"}
-                  </p>
-                </button>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-
               <DropdownMenuItem onClick={() => setIsSettingsOpen(true)}>
                 <Settings className="size-4" />
                 <span>Settings</span>
