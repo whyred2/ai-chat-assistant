@@ -34,6 +34,7 @@ import { GeneralSettings } from "./general-settings";
 import { AISettings } from "./ai-settings";
 import { DataSettings } from "./data-settings";
 import { PersonaSettings } from "./persona-settings";
+import { useChat } from "@/components/providers/chat-provider";
 
 import { cn } from "@/lib/utils";
 
@@ -72,6 +73,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     React.useState<number>(20);
   const [loadingAISettings, setLoadingAISettings] =
     React.useState<boolean>(false);
+
+  const { refreshChats } = useChat();
 
   const sections = [
     { id: "general" as const, label: "General", icon: SettingsIcon },
@@ -173,6 +176,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
       if (response.ok) {
         toast.success("All chats deleted successfully");
+        refreshChats();
         router.refresh();
       } else {
         toast.error("Failed to delete chats");

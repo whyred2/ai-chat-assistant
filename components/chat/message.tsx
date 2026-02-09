@@ -1,10 +1,14 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { User, Sparkles, Copy, Pen } from "lucide-react";
+import React from "react";
+
+import { User, Sparkles, Copy, Pen, Check } from "lucide-react";
 import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button } from "../ui/button";
+
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 interface MessageProps {
   role: "user" | "assistant";
@@ -61,30 +65,52 @@ const markdownComponents: Components = {
 export function Message({ role, content, isStreaming }: MessageProps) {
   const isUser = role === "user";
 
+  const [isEditing, setIsEditint] = React.useState<boolean>(false);
+  const [editText, setEditText] = React.useState<string>("");
+
+  const [isCopied, setIsCopied] = React.useState<boolean>(false);
+
+  const handleCopyMessage = (textContent: string) => {
+    console.log(textContent);
+    try {
+      navigator.clipboard.writeText(textContent);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      console.error("Failed to copy text: ", error);
+    }
+  };
+
   return (
-    <div className={cn("flex flex-col w-full ")}>
+    <div className={cn("flex flex-col w-full")}>
       <div
         className={cn(
-          "flex w-full gap-2 px-4 py-3",
+          "flex w-full gap-2 px-2",
           isUser ? "justify-end" : "justify-start",
         )}
       >
         {!isUser && (
-          <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
+          <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full max-md:hidden">
             <Sparkles className="size-6" />
           </div>
         )}
 
         <div
           className={cn(
-            "max-w-[75%] rounded-2xl px-4 py-2",
+            "max-w-[75%] rounded-xl px-4 py-2",
             isUser
               ? "bg-primary text-primary-foreground rounded-tr-sm"
               : "bg-muted text-foreground rounded-tl-sm",
           )}
         >
           {isUser ? (
-            <p className="whitespace-pre-wrap">{content}</p>
+            <>
+              {isEditing ? (
+                <div></div>
+              ) : (
+                <p className="whitespace-pre-wrap">{content}</p>
+              )}
+            </>
           ) : (
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <ReactMarkdown
@@ -101,7 +127,7 @@ export function Message({ role, content, isStreaming }: MessageProps) {
         </div>
 
         {isUser && (
-          <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-full">
+          <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-full max-md:hidden">
             <User className="size-6" />
           </div>
         )}
@@ -109,15 +135,23 @@ export function Message({ role, content, isStreaming }: MessageProps) {
 
       <div
         className={cn(
-          "flex gap-2 items-center",
-          isUser ? "justify-end" : "justify-start",
+          "flex gap-2 items-center mt-2 px-2",
+          isUser ? "justify-end md:mr-12" : "justify-start md:ml-12",
         )}
       >
-        <Button variant="ghost" size="icon">
+        <Button variant="ghost" size="icon" onClick={() => setIsEditint(true)}>
           <Pen className="size-4" />
         </Button>
-        <Button variant="ghost" size="icon">
-          <Copy className="size-4" />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => handleCopyMessage(content)}
+        >
+          {isCopied ? (
+            <Check className="size-4 text-green-500" />
+          ) : (
+            <Copy className="size-4" />
+          )}
         </Button>
       </div>
     </div>

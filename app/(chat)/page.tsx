@@ -29,10 +29,7 @@ export default function Home() {
       {/* Welcome message */}
       <div className="flex flex-1 items-center justify-center">
         <div className="text-center">
-          <h1 className="text-3xl font-bold">Привет! 👋</h1>
-          <p className="text-muted-foreground mt-2">
-            Задайте любой вопрос, и я постараюсь помочь
-          </p>
+          <h1 className="text-3xl font-bold">Hello! 👋</h1>
         </div>
       </div>
 

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body: ChatRequest = await request.json();
-    const { message, chatId, model = "mistral-small-latest" } = body;
+    const { message, chatId, model } = body;
 
     if (!message?.trim()) {
       return new Response(JSON.stringify({ error: "Message is required" }), {
