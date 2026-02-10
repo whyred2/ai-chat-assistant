@@ -15,12 +15,14 @@ interface MessagesListProps {
   messages: ChatMessage[];
   isStreaming: boolean;
   streamingContent: string;
+  onEditMessage: (messageId: string, newContent: string) => Promise<boolean>;
 }
 
 export function MessagesList({
   messages,
   isStreaming,
   streamingContent,
+  onEditMessage,
 }: MessagesListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
@@ -39,8 +41,10 @@ export function MessagesList({
         {messages.map((message) => (
           <Message
             key={message.id}
+            messageId={message.id}
             role={message.role}
             content={message.content}
+            onEdit={onEditMessage}
           />
         ))}
 

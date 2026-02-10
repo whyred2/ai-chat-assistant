@@ -40,6 +40,7 @@ interface ChatContextType {
   loadChat: (chatId: string) => Promise<void>;
   clearCurrentChat: () => void;
   refreshChats: () => Promise<void>;
+  editMessage: (messageId: string, newContent: string) => Promise<boolean>;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -107,6 +108,38 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Failed to load chat:", error);
+      }
+    },
+    [sessionId],
+  );
+
+  // Редактирование сообщения
+  const editMessage = useCallback(
+    async (messageId: string, newContent: string): Promise<boolean> => {
+      if (!sessionId) return false;
+
+      try {
+        const res = await fetch("/api/chat/message", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Session-Id": sessionId,
+          },
+          body: JSON.stringify({ messageId, content: newContent }),
+        });
+
+        if (res.ok) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId ? { ...m, content: newContent } : m,
+            ),
+          );
+          return true;
+        }
+        return false;
+      } catch (error) {
+        console.error("Failed to edit message:", error);
+        return false;
       }
     },
     [sessionId],
@@ -230,6 +263,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         loadChat,
         clearCurrentChat,
         refreshChats,
+        editMessage,
       }}
     >
       {children}

@@ -9,11 +9,14 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { toast } from "react-toastify";
 
 interface MessageProps {
+  messageId?: string;
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
+  onEdit?: (messageId: string, newContent: string) => Promise<boolean>;
 }
 
 const markdownComponents: Components = {
@@ -62,7 +65,13 @@ const markdownComponents: Components = {
   ),
 };
 
-export function Message({ role, content, isStreaming }: MessageProps) {
+export function Message({
+  messageId,
+  role,
+  content,
+  isStreaming,
+  onEdit,
+}: MessageProps) {
   const isUser = role === "user";
 
   const [isEditing, setIsEditint] = React.useState<boolean>(false);
@@ -81,8 +90,16 @@ export function Message({ role, content, isStreaming }: MessageProps) {
     }
   };
 
-  const handleEditSave = (editedText: string) => {
-    console.log(editedText);
+  const handleEditSave = async (editedText: string) => {
+    if (onEdit && messageId) {
+      const success = await onEdit(messageId, editedText);
+      if (success) {
+        toast.success("The message has been edited successfully");
+        setIsEditint(false);
+      } else {
+        toast.error("Error saving message");
+      }
+    }
   };
 
   return (
@@ -134,7 +151,22 @@ export function Message({ role, content, isStreaming }: MessageProps) {
           ) : (
             <>
               {isEditing ? (
-                <></>
+                <div className="flex flex-col gap-2">
+                  <Textarea
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="max-h-40 min-h-20 h-30"
+                  />
+
+                  <div className="flex items-center justify-end gap-2 mb-2">
+                    <Button variant="ghost" onClick={() => setIsEditint(false)}>
+                      Cancel
+                    </Button>
+                    <Button onClick={() => handleEditSave(editText)}>
+                      Save
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <ReactMarkdown
@@ -166,7 +198,14 @@ export function Message({ role, content, isStreaming }: MessageProps) {
           isEditing && "hidden",
         )}
       >
-        <Button variant="ghost" size="icon" onClick={() => setIsEditint(true)}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            setEditText(content);
+            setIsEditint(true);
+          }}
+        >
           <Pen className="size-4" />
         </Button>
         <Button
