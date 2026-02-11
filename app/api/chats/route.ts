@@ -1,29 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api";
 
 /**
  * GET /api/chats
- * Получить список чатов пользователя
  */
-export async function GET(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const GET = withAuth(async (_request, user) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ chats: [] });
-    }
-
     const chats = await prisma.chat.findMany({
       where: { userId: user.id },
       orderBy: { updatedAt: "desc" },
@@ -43,4 +26,4 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

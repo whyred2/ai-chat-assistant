@@ -34,8 +34,8 @@ export function ChatInputArea({
   const [input, setInput] = React.useState<string>("");
   const [selectedModel, setSelectedModel] = React.useState<string | null>(null);
 
-  const MAX_CHARS = 1000;
-  const WARNING_THRESHOLD = 800;
+  const MAX_CHARS = 5000;
+  const WARNING_THRESHOLD = 3000;
 
   const currentModel =
     selectedModel || user?.preferredModel || "mistral-small-latest";
@@ -45,7 +45,7 @@ export function ChatInputArea({
   };
 
   const handleSend = () => {
-    if (!input.trim() || isStreaming || isLoading || input.length > 1000)
+    if (!input.trim() || isStreaming || isLoading || input.length > MAX_CHARS)
       return;
 
     onSendMessage(input);

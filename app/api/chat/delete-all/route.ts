@@ -1,25 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api";
 
-export async function DELETE(request: NextRequest) {
-  const sessionId = await request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const DELETE = withAuth(async (_request, user) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
     await prisma.chat.deleteMany({
       where: { userId: user.id },
     });
@@ -32,4 +16,4 @@ export async function DELETE(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

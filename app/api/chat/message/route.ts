@@ -1,16 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withAuth, errorResponse } from "@/lib/api";
 
-export async function PUT(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const PUT = withAuth(async (request, user) => {
   try {
     const { messageId, content } = await request.json();
 
@@ -21,15 +13,6 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Verify the message belongs to a chat owned by this user
     const message = await prisma.message.findUnique({
       where: { id: messageId },
       include: { chat: { select: { userId: true } } },
@@ -52,4 +35,32 @@ export async function PUT(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
+
+export const DELETE = withAuth(async (request, user) => {
+  try {
+    const { messageId } = await request.json();
+
+    if (!messageId) {
+      return errorResponse("Message ID is required", 400);
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      include: { chat: { select: { userId: true } } },
+    });
+
+    if (!message || message.chat.userId !== user.id) {
+      return errorResponse("Message not found", 404);
+    }
+
+    await prisma.message.delete({
+      where: { id: messageId },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting message:", error);
+    return errorResponse("Internal server error", 500);
+  }
+});

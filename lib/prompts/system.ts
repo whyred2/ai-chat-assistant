@@ -41,14 +41,29 @@ export const SYSTEM_PROMPT = `You are a highly capable AI assistant designed to 
 - Overly lengthy responses when a concise answer would suffice
 - Being condescending or overly simplistic with technically competent users`;
 
-export function buildSystemPrompt(persona?: string | null): string {
+export function buildSystemPrompt(
+  persona?: string | null,
+  summary?: string | null,
+): string {
+  let prompt = SYSTEM_PROMPT;
+
+  if (summary) {
+    prompt += `
+
+## Previous Conversation Context
+The following is a summary of earlier messages in this conversation. Use it to maintain continuity:
+
+${summary}`;
+  }
+
   if (persona) {
-    return `${SYSTEM_PROMPT}
+    prompt += `
 
 ## User Context
 The following information describes the user you're conversing with. Use this to personalize your responses:
 
 ${persona}`;
   }
-  return SYSTEM_PROMPT;
+
+  return prompt;
 }

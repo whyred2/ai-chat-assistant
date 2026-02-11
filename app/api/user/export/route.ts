@@ -1,24 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api";
 
-export async function GET(request: NextRequest) {
-  const sessionId = await request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const GET = withAuth(async (_request, user) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: sessionId },
+    const data = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: {
+        chats: {
+          include: { messages: true },
+        },
+      },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    return new Response(JSON.stringify(data, null, 2), {
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Disposition": `attachment; filename="ai-bot-data-${Date.now()}.json"`,
+      },
+    });
   } catch (error) {
     console.error("Failed export data:", error);
     return NextResponse.json(
@@ -26,4 +26,4 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

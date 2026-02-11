@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import { User, Sparkles, Copy, Pen, Check } from "lucide-react";
+import { User, Sparkles, Copy, Pen, Check, RefreshCw } from "lucide-react";
 import ReactMarkdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -16,53 +16,103 @@ interface MessageProps {
   role: "user" | "assistant";
   content: string;
   isStreaming?: boolean;
+  isLastAssistant?: boolean;
   onEdit?: (messageId: string, newContent: string) => Promise<boolean>;
+  onRegenerate?: () => void;
 }
 
 const markdownComponents: Components = {
-  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-  ul: ({ children }) => <ul className="mb-2 list-disc pl-4">{children}</ul>,
-  ol: ({ children }) => <ol className="mb-2 list-decimal pl-4">{children}</ol>,
-  li: ({ children }) => <li className="mb-1">{children}</li>,
+  h1: ({ children }) => (
+    <h1 className="mb-4 mt-6 text-2xl font-bold first:mt-0">{children}</h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mb-3 mt-5 text-xl font-semibold first:mt-0">{children}</h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mb-2 mt-4 text-lg font-semibold first:mt-0">{children}</h3>
+  ),
+  h4: ({ children }) => (
+    <h4 className="mb-2 mt-3 text-base font-semibold first:mt-0">{children}</h4>
+  ),
+  p: ({ children }) => <p className="mb-3 leading-7 last:mb-0">{children}</p>,
+  ul: ({ children }) => (
+    <ul className="mb-3 ml-1 list-disc space-y-1.5 pl-5">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mb-3 ml-1 list-decimal space-y-1.5 pl-5">{children}</ol>
+  ),
+  li: ({ children }) => <li className="leading-7">{children}</li>,
+  strong: ({ children }) => (
+    <strong className="font-semibold">{children}</strong>
+  ),
+  em: ({ children }) => <em className="italic">{children}</em>,
   code: ({ className, children, ...props }) => {
     const isInline = !className;
     if (isInline) {
       return (
-        <code className="bg-muted rounded px-1 py-0.5 text-sm" {...props}>
+        <code
+          className="bg-primary/10 text-primary rounded-md px-1.5 py-0.5 text-[0.85em] font-mono"
+          {...props}
+        >
           {children}
         </code>
       );
     }
+
+    const language = className?.replace("language-", "") || "";
+
     return (
       <code
         className={cn(
-          "bg-muted block overflow-x-auto rounded-lg p-3 text-sm",
+          "block overflow-x-auto p-2 text-sm font-mono leading-relaxed",
           className,
         )}
         {...props}
       >
+        {language && (
+          <span className="text-muted-foreground/60 mb-2 block text-xs uppercase tracking-wide">
+            {language}
+          </span>
+        )}
         {children}
       </code>
     );
   },
   pre: ({ children }) => (
-    <pre className="bg-muted mb-2 overflow-x-auto rounded-lg">{children}</pre>
+    <pre className="bg-muted/70 border-border mb-3 overflow-x-auto rounded-xl border">
+      {children}
+    </pre>
   ),
   a: ({ href, children }) => (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-primary hover:underline"
+      className="text-primary font-medium underline decoration-primary/30 underline-offset-2 transition-colors hover:decoration-primary/60"
     >
       {children}
     </a>
   ),
   blockquote: ({ children }) => (
-    <blockquote className="border-primary/50 mb-2 border-l-2 pl-3 italic">
+    <blockquote className="border-primary/40 bg-primary/5 mb-3 rounded-r-lg border-l-3 py-2 pl-4 pr-3 italic">
       {children}
     </blockquote>
   ),
+  hr: () => <hr className="border-border my-6" />,
+  table: ({ children }) => (
+    <div className="mb-3 overflow-x-auto rounded-lg border">
+      <table className="w-full text-sm">{children}</table>
+    </div>
+  ),
+  thead: ({ children }) => (
+    <thead className="bg-muted/50 border-b">{children}</thead>
+  ),
+  th: ({ children }) => (
+    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => <td className="border-t px-3 py-2">{children}</td>,
 };
 
 export function Message({
@@ -70,7 +120,9 @@ export function Message({
   role,
   content,
   isStreaming,
+  isLastAssistant,
   onEdit,
+  onRegenerate,
 }: MessageProps) {
   const isUser = role === "user";
 
@@ -103,7 +155,7 @@ export function Message({
   };
 
   return (
-    <div className={cn("flex flex-col w-full")}>
+    <div className="flex flex-col w-full">
       <div
         className={cn(
           "flex w-full gap-2 px-2",
@@ -112,17 +164,17 @@ export function Message({
       >
         {!isUser && (
           <div className="bg-primary text-primary-foreground flex size-10 shrink-0 items-center justify-center rounded-full max-md:hidden">
-            <Sparkles className="size-6" />
+            <Sparkles className="size-5" />
           </div>
         )}
 
         <div
           className={cn(
-            "rounded-xl p-4",
+            "rounded-xl px-3 py-2",
             isUser
               ? "bg-primary text-primary-foreground rounded-tr-sm"
               : "bg-muted text-foreground rounded-tl-sm",
-            isEditing ? "max-w-full bg-transparent w-full p-0" : "max-w-[75%]",
+            isEditing ? "max-w-full bg-transparent w-full p-0" : "max-w-full",
           )}
         >
           {isUser ? (
@@ -168,7 +220,7 @@ export function Message({
                   </div>
                 </div>
               ) : (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
+                <div className="max-w-none">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={markdownComponents}
@@ -186,7 +238,7 @@ export function Message({
 
         {isUser && (
           <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-full max-md:hidden">
-            <User className="size-6" />
+            <User className="size-5" />
           </div>
         )}
       </div>
@@ -219,6 +271,11 @@ export function Message({
             <Copy className="size-4" />
           )}
         </Button>
+        {isLastAssistant && !isStreaming && onRegenerate && (
+          <Button variant="ghost" size="icon" onClick={onRegenerate}>
+            <RefreshCw className="size-4" />
+          </Button>
+        )}
       </div>
     </div>
   );

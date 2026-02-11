@@ -1,26 +1,18 @@
 import { prisma } from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api";
 
 /**
  * GET /api/user/profile
- * Получить профиль пользователя
  */
-export async function GET(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const GET = withAuth(async (_request, user) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
+    const profile = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         id: true,
         name: true,
+        usePersona: true,
         persona: true,
         enableSummarization: true,
         messageHistoryLimit: true,
@@ -28,11 +20,7 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(user);
+    return NextResponse.json(profile);
   } catch (error) {
     console.error("Failed to get user profile:", error);
     return NextResponse.json(
@@ -40,28 +28,21 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
 /**
  * PATCH /api/user/profile
- * Обновить профиль пользователя (включая persona)
  */
-export async function PATCH(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const PATCH = withAuth(async (request, user) => {
   try {
     const body = await request.json();
-    const { name, persona } = body;
+    const { name, persona, usePersona } = body;
 
-    // Формируем объект обновления
-    const updateData: { name?: string; persona?: string | null } = {};
+    const updateData: {
+      name?: string;
+      persona?: string | null;
+      usePersona?: boolean;
+    } = {};
 
     if (name !== undefined) {
       updateData.name = name;
@@ -71,17 +52,22 @@ export async function PATCH(request: NextRequest) {
       updateData.persona = persona || null;
     }
 
-    const user = await prisma.user.update({
-      where: { sessionId },
+    if (usePersona !== undefined) {
+      updateData.usePersona = usePersona;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
       data: updateData,
       select: {
         id: true,
         name: true,
+        usePersona: true,
         persona: true,
       },
     });
 
-    return NextResponse.json(user);
+    return NextResponse.json(updated);
   } catch (error) {
     console.error("Failed to update user profile:", error);
     return NextResponse.json(
@@ -89,4 +75,4 @@ export async function PATCH(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

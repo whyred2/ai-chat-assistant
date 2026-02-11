@@ -16,6 +16,7 @@ interface MessagesListProps {
   isStreaming: boolean;
   streamingContent: string;
   onEditMessage: (messageId: string, newContent: string) => Promise<boolean>;
+  onRegenerate: () => void;
 }
 
 export function MessagesList({
@@ -23,6 +24,7 @@ export function MessagesList({
   isStreaming,
   streamingContent,
   onEditMessage,
+  onRegenerate,
 }: MessagesListProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const bottomRef = React.useRef<HTMLDivElement>(null);
@@ -38,15 +40,25 @@ export function MessagesList({
   return (
     <ScrollArea className="flex-1 overflow-y-scroll" ref={scrollRef}>
       <div className="mx-auto max-w-3xl py-10">
-        {messages.map((message) => (
-          <Message
-            key={message.id}
-            messageId={message.id}
-            role={message.role}
-            content={message.content}
-            onEdit={onEditMessage}
-          />
-        ))}
+        {messages.map((message, index) => {
+          const lastAssistantIndex = messages.findLastIndex(
+            (m) => m.role === "assistant",
+          );
+          const isLastAssistant =
+            message.role === "assistant" && index === lastAssistantIndex;
+
+          return (
+            <Message
+              key={message.id}
+              messageId={message.id}
+              role={message.role}
+              content={message.content}
+              onEdit={onEditMessage}
+              isLastAssistant={isLastAssistant}
+              onRegenerate={onRegenerate}
+            />
+          );
+        })}
 
         {isStreaming && streamingContent && (
           <Message role="assistant" content={streamingContent} isStreaming />

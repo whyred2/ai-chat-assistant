@@ -1,34 +1,21 @@
 import { prisma } from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { withAuth } from "@/lib/api";
 
 /**
  * GET /api/user/ai-settings
- * Получить AI настройки пользователя
  */
-export async function GET(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const GET = withAuth(async (_request, user) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
+    const settings = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         enableSummarization: true,
         messageHistoryLimit: true,
       },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(user);
+    return NextResponse.json(settings);
   } catch (error) {
     console.error("Failed to get AI settings:", error);
     return NextResponse.json(
@@ -36,27 +23,16 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});
 
 /**
  * POST /api/user/ai-settings
- * Обновить AI настройки пользователя
  */
-export async function POST(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const POST = withAuth(async (request, user) => {
   try {
     const body = await request.json();
     const { enableSummarization, messageHistoryLimit } = body;
 
-    // Формируем объект обновления
     const updateData: {
       enableSummarization?: boolean;
       messageHistoryLimit?: number;
@@ -67,13 +43,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (messageHistoryLimit !== undefined) {
-      // Валидация лимита
       const limit = Math.min(Math.max(Number(messageHistoryLimit), 10), 100);
       updateData.messageHistoryLimit = limit;
     }
 
-    const user = await prisma.user.update({
-      where: { sessionId },
+    const updated = await prisma.user.update({
+      where: { id: user.id },
       data: updateData,
       select: {
         enableSummarization: true,
@@ -81,7 +56,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(user);
+    return NextResponse.json(updated);
   } catch (error) {
     console.error("Failed to update AI settings:", error);
     return NextResponse.json(
@@ -89,4 +64,4 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
-}
+});

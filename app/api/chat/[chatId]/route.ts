@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { withAuth } from "@/lib/api";
 
 interface RouteParams {
   params: Promise<{ chatId: string }>;
@@ -7,28 +8,11 @@ interface RouteParams {
 
 /**
  * GET /api/chat/[chatId]
- * Получить сообщения чата
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const { chatId } = await params;
-  const sessionId = request.headers.get("X-Session-Id");
 
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
-  try {
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
+  const handler = withAuth(async (_request, user) => {
     const chat = await prisma.chat.findUnique({
       where: { id: chatId, userId: user.id },
       include: {
@@ -55,11 +39,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
       messages: chat.messages,
     });
-  } catch (error) {
-    console.error("Failed to fetch chat:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
-  }
+  });
+
+  return handler(request);
 }

@@ -20,6 +20,7 @@ export default function ChatPage({ params }: ChatPageProps) {
     sendMessage,
     currentChatId,
     editMessage,
+    regenerateMessage,
   } = useChat();
 
   // Загружаем чат при входе
@@ -42,6 +43,7 @@ export default function ChatPage({ params }: ChatPageProps) {
         isStreaming={isStreaming}
         streamingContent={streamingContent}
         onEditMessage={editMessage}
+        onRegenerate={regenerateMessage}
       />
 
       <ChatInputArea

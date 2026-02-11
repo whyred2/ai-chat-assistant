@@ -41,6 +41,7 @@ interface ChatContextType {
   clearCurrentChat: () => void;
   refreshChats: () => Promise<void>;
   editMessage: (messageId: string, newContent: string) => Promise<boolean>;
+  regenerateMessage: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
@@ -192,6 +193,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const decoder = new TextDecoder();
         let fullContent = "";
         let newChatId: string | null = null;
+        let realAssistantId: string | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -213,6 +215,20 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                   setCurrentChatId(parsed.chatId);
                 }
 
+                if (parsed.userMessageId) {
+                  setMessages((prev) =>
+                    prev.map((m) =>
+                      m.id === userMessage.id
+                        ? { ...m, id: parsed.userMessageId }
+                        : m,
+                    ),
+                  );
+                }
+
+                if (parsed.assistantMessageId) {
+                  realAssistantId = parsed.assistantMessageId;
+                }
+
                 if (parsed.content) {
                   fullContent += parsed.content;
                   setStreamingContent(fullContent);
@@ -224,10 +240,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Добавляем полное сообщение ассистента
+        // Добавляем полное сообщение ассистента с реальным ID
         if (fullContent) {
           const assistantMessage: ChatMessage = {
-            id: crypto.randomUUID(),
+            id: realAssistantId || crypto.randomUUID(),
             role: "assistant",
             content: fullContent,
             createdAt: new Date(),
@@ -250,6 +266,63 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [sessionId, currentChatId, user?.preferredModel, refreshChats],
   );
 
+  const regenerateMessage = useCallback(async () => {
+    if (!sessionId || !currentChatId || isStreaming) return;
+
+    const lastAssistantIndex = messages.findLastIndex(
+      (m) => m.role === "assistant",
+    );
+    if (lastAssistantIndex === -1) return;
+
+    const lastAssistantMessage = messages[lastAssistantIndex];
+
+    // Находим последнее сообщение пользователя перед этим ответом
+    const lastUserMessage = messages
+      .slice(0, lastAssistantIndex)
+      .findLast((m) => m.role === "user");
+    if (!lastUserMessage) return;
+
+    try {
+      // Удаляем последнее сообщение ассистента с сервера
+      const deleteRes = await fetch("/api/chat/message", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": sessionId,
+        },
+        body: JSON.stringify({ messageId: lastAssistantMessage.id }),
+      });
+
+      if (!deleteRes.ok) {
+        console.error("Failed to delete assistant message");
+        return;
+      }
+
+      // Удаляем и последнее сообщение пользователя с сервера (sendMessage создаст его заново)
+      await fetch("/api/chat/message", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": sessionId,
+        },
+        body: JSON.stringify({ messageId: lastUserMessage.id }),
+      });
+
+      // Удаляем оба сообщения из локального состояния
+      setMessages((prev) =>
+        prev.filter(
+          (m) =>
+            m.id !== lastAssistantMessage.id && m.id !== lastUserMessage.id,
+        ),
+      );
+
+      // Повторная отправка
+      await sendMessage(lastUserMessage.content);
+    } catch (error) {
+      console.error("Failed to regenerate message:", error);
+    }
+  }, [sessionId, currentChatId, isStreaming, messages, sendMessage]);
+
   return (
     <ChatContext.Provider
       value={{
@@ -264,6 +337,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         clearCurrentChat,
         refreshChats,
         editMessage,
+        regenerateMessage,
       }}
     >
       {children}

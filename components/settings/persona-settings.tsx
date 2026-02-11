@@ -10,6 +10,7 @@ import { showToast } from "@/lib/toast";
 
 interface UserProfile {
   id: string;
+  usePersona?: boolean;
   persona?: string | null;
 }
 
@@ -29,11 +30,15 @@ export function PersonaSettings({
   onProfileUpdate,
 }: PersonaSettingsProps) {
   const [persona, setPersona] = useState(profile?.persona || "");
+  const [usePersonaEnabled, setUsePersonaEnabled] = useState(
+    profile?.usePersona ?? false,
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   // Sync with profile when it changes
   useEffect(() => {
     setPersona(profile?.persona || "");
+    setUsePersonaEnabled(profile?.usePersona ?? false);
   }, [profile]);
 
   const handleSavePersona = async () => {
@@ -124,7 +129,32 @@ export function PersonaSettings({
                 Use your persona to personalize AI responses
               </p>
             </div>
-            <Switch id="persona-toggle" />
+            <Switch
+              id="persona-toggle"
+              checked={usePersonaEnabled}
+              onCheckedChange={async (checked) => {
+                setUsePersonaEnabled(checked);
+                if (!sessionId) return;
+                try {
+                  const response = await fetch("/api/user/profile", {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "X-Session-Id": sessionId,
+                    },
+                    body: JSON.stringify({ usePersona: checked }),
+                  });
+                  if (!response.ok) throw new Error();
+                  showToast.success(
+                    checked ? "Persona enabled" : "Persona disabled",
+                  );
+                  onProfileUpdate();
+                } catch {
+                  setUsePersonaEnabled(!checked);
+                  showToast.error("Failed to update persona setting");
+                }
+              }}
+            />
           </div>
         </div>
       )}

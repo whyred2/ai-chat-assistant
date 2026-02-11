@@ -26,7 +26,8 @@ model User {
   messageHistoryLimit Int     @default(20)
 
   // User Persona
-  persona String? @db.Text
+  usePersona Boolean @default(false)
+  persona    String? @db.Text
 
   chats Chat[]
 

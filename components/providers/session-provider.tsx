@@ -15,6 +15,7 @@ interface User {
   preferredModel: string;
   enableSummarization: boolean;
   messageHistoryLimit: number;
+  usePersona: boolean;
   persona: string | null;
 }
 

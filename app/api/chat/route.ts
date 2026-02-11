@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { mistral } from "@/lib/ai";
 import { buildSystemPrompt } from "@/lib/prompts/system";
-import { NextRequest, NextResponse } from "next/server";
+import { summarizeMessages } from "@/lib/prompts/summarize";
+import { NextResponse } from "next/server";
+import { withAuth, errorResponse } from "@/lib/api";
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -14,61 +16,33 @@ interface ChatRequest {
   model?: string;
 }
 
-export async function POST(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return new Response(JSON.stringify({ error: "Session ID is required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
+export const POST = withAuth(async (request, user) => {
   try {
     const body: ChatRequest = await request.json();
     const { message, chatId, model } = body;
 
     if (!message?.trim()) {
-      return new Response(JSON.stringify({ error: "Message is required" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return errorResponse("Message is required", 400);
     }
 
-    // Получаем пользователя
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
-    });
-
-    if (!user) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    // Создаём или получаем чат
     let chat;
     if (chatId) {
       chat = await prisma.chat.findUnique({
         where: { id: chatId, userId: user.id },
-        include: { messages: { orderBy: { createdAt: "asc" } } },
       });
     }
 
     if (!chat) {
-      // Создаём новый чат
       chat = await prisma.chat.create({
         data: {
           userId: user.id,
           title: message.slice(0, 50) + (message.length > 50 ? "..." : ""),
+          usePersona: user.usePersona,
         },
-        include: { messages: true },
       });
     }
 
-    // Сохраняем сообщение пользователя
-    await prisma.message.create({
+    const userMessage = await prisma.message.create({
       data: {
         chatId: chat.id,
         role: "user",
@@ -76,35 +50,40 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Формируем историю сообщений для API
-    const systemPrompt = buildSystemPrompt(
-      chat.usePersona ? user.persona : null,
-    );
+    const recentMessages = await prisma.message.findMany({
+      where: { chatId: chat.id },
+      orderBy: { createdAt: "desc" },
+      take: user.messageHistoryLimit,
+      select: { role: true, content: true },
+    });
+    recentMessages.reverse();
+
+    const persona = chat.usePersona ? user.persona : null;
+    const systemPrompt = buildSystemPrompt(persona, chat.summary);
 
     const messages: ChatMessage[] = [
       { role: "system", content: systemPrompt },
-      ...chat.messages.slice(-user.messageHistoryLimit).map((m) => ({
+      ...recentMessages.map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
       })),
-      { role: "user", content: message },
     ];
 
-    // Вызываем Mistral API со стримингом
+    const selectedModel = model || user.preferredModel;
     const stream = await mistral.chat.stream({
-      model,
+      model: selectedModel,
       messages,
     });
 
-    // Создаём стрим для клиента
     const encoder = new TextEncoder();
     let fullContent = "";
 
     const responseStream = new ReadableStream({
       async start(controller) {
-        // Отправляем chatId в начале
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ chatId: chat.id })}\n\n`),
+          encoder.encode(
+            `data: ${JSON.stringify({ chatId: chat.id, userMessageId: userMessage.id })}\n\n`,
+          ),
         );
 
         try {
@@ -118,15 +97,58 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Сохраняем полный ответ ассистента
           if (fullContent) {
-            await prisma.message.create({
+            const assistantMessage = await prisma.message.create({
               data: {
                 chatId: chat.id,
                 role: "assistant",
                 content: fullContent,
               },
             });
+
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ assistantMessageId: assistantMessage.id })}\n\n`,
+              ),
+            );
+
+            if (user.enableSummarization) {
+              const unsummarizedCount = await prisma.message.count({
+                where: { chatId: chat.id, isSummarized: false },
+              });
+
+              if (unsummarizedCount > user.messageHistoryLimit) {
+                const messagesToSummarize = await prisma.message.findMany({
+                  where: { chatId: chat.id, isSummarized: false },
+                  orderBy: { createdAt: "asc" },
+                  take: unsummarizedCount - user.messageHistoryLimit,
+                  select: { id: true, role: true, content: true },
+                });
+
+                try {
+                  const summary = await summarizeMessages(
+                    messagesToSummarize,
+                    chat.summary,
+                    selectedModel,
+                  );
+
+                  await prisma.$transaction([
+                    prisma.chat.update({
+                      where: { id: chat.id },
+                      data: { summary },
+                    }),
+                    prisma.message.updateMany({
+                      where: {
+                        id: { in: messagesToSummarize.map((m) => m.id) },
+                      },
+                      data: { isSummarized: true },
+                    }),
+                  ]);
+                } catch (error) {
+                  console.error("Summarization failed:", error);
+                }
+              }
+            }
           }
 
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -147,39 +169,16 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Chat API error:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return errorResponse("Internal server error", 500);
   }
-}
+});
 
-export async function DELETE(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const DELETE = withAuth(async (request, user) => {
   try {
     const { chatId } = await request.json();
 
     if (!chatId) {
-      return NextResponse.json(
-        { error: "Chat ID is required" },
-        { status: 400 },
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return errorResponse("Chat ID is required", 400);
     }
 
     await prisma.chat.delete({
@@ -189,52 +188,26 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete chat: ", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return errorResponse("Internal server error", 500);
   }
-}
+});
 
-export async function PATCH(request: NextRequest) {
-  const sessionId = request.headers.get("X-Session-Id");
-
-  if (!sessionId) {
-    return NextResponse.json(
-      { error: "Session ID is required" },
-      { status: 400 },
-    );
-  }
-
+export const PATCH = withAuth(async (request, user) => {
   try {
     const { chatId, title } = await request.json();
 
     if (!chatId) {
-      return NextResponse.json(
-        { error: "Chat ID is required" },
-        { status: 400 },
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { sessionId },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return errorResponse("Chat ID is required", 400);
     }
 
     await prisma.chat.update({
       where: { id: chatId },
-      data: { title: title },
+      data: { title },
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error updating chat:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return errorResponse("Internal server error", 500);
   }
-}
+});
