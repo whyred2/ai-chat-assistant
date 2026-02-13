@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ChatInputAreaProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, model?: string) => void;
   isEmptyChat: boolean;
   isStreaming?: boolean;
 }
@@ -30,7 +30,7 @@ export function ChatInputArea({
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const textareaContainerRef = React.useRef<HTMLDivElement>(null);
 
-  const { user, isLoading } = useSession();
+  const { user, isLoading, sessionId } = useSession();
   const [input, setInput] = React.useState<string>("");
   const [selectedModel, setSelectedModel] = React.useState<string | null>(null);
 
@@ -48,7 +48,7 @@ export function ChatInputArea({
     if (!input.trim() || isStreaming || isLoading || input.length > MAX_CHARS)
       return;
 
-    onSendMessage(input);
+    onSendMessage(input, currentModel);
     setInput("");
   };
 
@@ -59,9 +59,24 @@ export function ChatInputArea({
     }
   };
 
-  const handleModelChange = (model: string) => {
-    setSelectedModel(model);
-    // TODO: сохранять в БД через API
+  const handleModelChange = async (model: string) => {
+    if (!sessionId) return;
+
+    const response = await fetch("/api/user/ai-settings", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-Id": sessionId,
+      },
+      body: JSON.stringify(model),
+    });
+
+    if (response.ok) {
+      console.log("Model switched. New model:", model);
+      setSelectedModel(model);
+    } else {
+      console.error("Error switching model.");
+    }
   };
 
   return (

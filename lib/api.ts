@@ -7,6 +7,8 @@ type AuthenticatedHandler = (
   user: User,
 ) => Promise<Response | NextResponse>;
 
+const rateLimitMap = new Map();
+
 export function withAuth(handler: AuthenticatedHandler) {
   return async (request: NextRequest) => {
     const sessionId = request.headers.get("X-Session-Id");
@@ -17,6 +19,15 @@ export function withAuth(handler: AuthenticatedHandler) {
         { status: 400 },
       );
     }
+
+    const lastRequest = rateLimitMap.get(sessionId);
+    const now = Date.now();
+
+    if (lastRequest && now - lastRequest < 2000) {
+      return errorResponse("Too mamy requests", 429);
+    }
+
+    rateLimitMap.set(sessionId, now);
 
     const user = await prisma.user.findUnique({
       where: { sessionId },

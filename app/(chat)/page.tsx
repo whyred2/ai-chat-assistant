@@ -15,8 +15,8 @@ export default function Home() {
     clearCurrentChat();
   }, [clearCurrentChat]);
 
-  const handleSendMessage = async (message: string) => {
-    const chatId = await sendMessage(message);
+  const handleSendMessage = async (message: string, model?: string) => {
+    const chatId = await sendMessage(message, model);
     if (chatId) {
       router.push(`/${chatId}`);
     }

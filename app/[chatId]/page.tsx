@@ -30,12 +30,12 @@ export default function ChatPage({ params }: ChatPageProps) {
     }
   }, [chatId, currentChatId, loadChat]);
 
-  const handleSendMessage = async (message: string) => {
-    await sendMessage(message);
+  const handleSendMessage = async (message: string, model?: string) => {
+    await sendMessage(message, model);
   };
 
   return (
-    <div className=" bg-background relative flex h-full w-full flex-col">
+    <div className="bg-background relative flex h-full w-full flex-col">
       <Header />
 
       <MessagesList

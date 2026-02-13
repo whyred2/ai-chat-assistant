@@ -70,6 +70,9 @@ export const POST = withAuth(async (request, user) => {
     ];
 
     const selectedModel = model || user.preferredModel;
+
+    console.log("selected model: ", selectedModel);
+
     const stream = await mistral.chat.stream({
       model: selectedModel,
       messages,

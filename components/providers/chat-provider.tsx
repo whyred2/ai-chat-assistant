@@ -87,7 +87,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [sessionId, refreshChats]);
 
-  // Загрузка конкретного чата
   const loadChat = useCallback(
     async (chatId: string) => {
       if (!sessionId) return;
@@ -114,7 +113,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [sessionId],
   );
 
-  // Редактирование сообщения
   const editMessage = useCallback(
     async (messageId: string, newContent: string): Promise<boolean> => {
       if (!sessionId) return false;
@@ -146,19 +144,16 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     [sessionId],
   );
 
-  // Очистка текущего чата (для новых чатов)
   const clearCurrentChat = useCallback(() => {
     setCurrentChatId(null);
     setMessages([]);
     setStreamingContent("");
   }, []);
 
-  // Отправка сообщения
   const sendMessage = useCallback(
     async (message: string, model?: string): Promise<string | null> => {
       if (!sessionId || !message.trim()) return null;
 
-      // Добавляем сообщение пользователя локально
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -240,7 +235,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Добавляем полное сообщение ассистента с реальным ID
         if (fullContent) {
           const assistantMessage: ChatMessage = {
             id: realAssistantId || crypto.randomUUID(),
@@ -251,7 +245,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setMessages((prev) => [...prev, assistantMessage]);
         }
 
-        // Обновляем список чатов
         await refreshChats();
 
         return newChatId || currentChatId;
@@ -276,14 +269,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     const lastAssistantMessage = messages[lastAssistantIndex];
 
-    // Находим последнее сообщение пользователя перед этим ответом
     const lastUserMessage = messages
       .slice(0, lastAssistantIndex)
       .findLast((m) => m.role === "user");
     if (!lastUserMessage) return;
 
     try {
-      // Удаляем последнее сообщение ассистента с сервера
       const deleteRes = await fetch("/api/chat/message", {
         method: "DELETE",
         headers: {
@@ -298,7 +289,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Удаляем и последнее сообщение пользователя с сервера (sendMessage создаст его заново)
       await fetch("/api/chat/message", {
         method: "DELETE",
         headers: {
@@ -308,7 +298,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         body: JSON.stringify({ messageId: lastUserMessage.id }),
       });
 
-      // Удаляем оба сообщения из локального состояния
       setMessages((prev) =>
         prev.filter(
           (m) =>
@@ -316,7 +305,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         ),
       );
 
-      // Повторная отправка
       await sendMessage(lastUserMessage.content);
     } catch (error) {
       console.error("Failed to regenerate message:", error);

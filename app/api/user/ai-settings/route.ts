@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { withAuth } from "@/lib/api";
+import { errorResponse, withAuth } from "@/lib/api";
 
 /**
  * GET /api/user/ai-settings
@@ -63,5 +63,23 @@ export const POST = withAuth(async (request, user) => {
       { error: "Internal server error" },
       { status: 500 },
     );
+  }
+});
+
+/**
+ * PATCH /api/user/ai-settings
+ */
+export const PATCH = withAuth(async (request, user) => {
+  const model = await request.json();
+  console.log(model);
+  try {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { preferredModel: model },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return errorResponse("Internal server error", 500);
   }
 });

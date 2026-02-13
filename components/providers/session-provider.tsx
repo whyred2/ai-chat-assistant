@@ -57,7 +57,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // Получаем или создаём sessionId
     let id = localStorage.getItem(STORAGE_KEY);
 
     if (!id) {
