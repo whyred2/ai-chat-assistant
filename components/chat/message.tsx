@@ -64,17 +64,28 @@ const markdownComponents: Components = {
     return (
       <code
         className={cn(
-          "block overflow-x-auto p-2 text-sm font-mono leading-relaxed",
+          "block overflow-hidden text-sm font-mono leading-relaxed",
           className,
         )}
         {...props}
       >
-        {language && (
-          <span className="text-muted-foreground/60 mb-2 block text-xs uppercase tracking-wide">
-            {language}
-          </span>
-        )}
-        {children}
+        <div className="flex items-center justify-between border-b p-2">
+          {language && (
+            <span className="text-muted-foreground ml-2 block text-xs uppercase tracking-wide">
+              {language}
+            </span>
+          )}
+          <Button
+            size="xs"
+            variant="ghost"
+            onClick={() => {
+              navigator.clipboard.writeText(children as string);
+            }}
+          >
+            Copy
+          </Button>
+        </div>
+        <div className="p-2">{children}</div>
       </code>
     );
   },
