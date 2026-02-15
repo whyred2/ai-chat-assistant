@@ -8,9 +8,8 @@ import { useEffect } from "react";
 
 export default function Home() {
   const router = useRouter();
-  const { clearCurrentChat, sendMessage, isStreaming, messages } = useChat();
+  const { clearCurrentChat, sendMessage, isStreaming } = useChat();
 
-  // Очищаем чат при входе на главную
   useEffect(() => {
     clearCurrentChat();
   }, [clearCurrentChat]);
@@ -26,12 +25,7 @@ export default function Home() {
     <div className="bg-background relative flex h-full w-full flex-col">
       <Header />
 
-      {/* Welcome message */}
-      <div className="flex flex-1 items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">Hello! 👋</h1>
-        </div>
-      </div>
+      <div className="flex-1 items-center justify-center"></div>
 
       <ChatInputArea
         onSendMessage={handleSendMessage}

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -33,16 +33,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { SettingsDialog } from "../settings";
+import { Input } from "@/components/ui/input";
+import { SettingsDialog } from "@/components/settings";
 import { useChat } from "@/components/providers/chat-provider";
 import { useSession } from "@/components/providers/session-provider";
 import { toast } from "react-toastify";
-import { Input } from "../ui/input";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { chats, isLoadingChats, refreshChats } = useChat();
   const { user, sessionId } = useSession();
 
@@ -74,6 +74,7 @@ export function Sidebar() {
 
     if (response.ok) {
       toast.success("Chat deleted");
+      router.push("/");
       refreshChats();
     } else {
       toast.error("Failed deleting chat");

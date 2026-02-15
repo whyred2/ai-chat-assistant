@@ -34,8 +34,8 @@ export function ChatInputArea({
   const [input, setInput] = React.useState<string>("");
   const [selectedModel, setSelectedModel] = React.useState<string | null>(null);
 
-  const MAX_CHARS = 5000;
-  const WARNING_THRESHOLD = 3000;
+  const MAX_CHARS = 1000;
+  const WARNING_THRESHOLD = 800;
 
   const currentModel =
     selectedModel || user?.preferredModel || "mistral-small-latest";
@@ -84,17 +84,11 @@ export function ChatInputArea({
       {/* Поле сообщения */}
       <div
         ref={textareaContainerRef}
-        className={cn(
-          isEmptyChat ? "-translate-y-[30vh]" : "translate-y-0",
-          "pointer-events-auto relative mx-auto flex max-w-3xl transition-[translate] duration-800 ease-in-out",
-        )}
+        className="pointer-events-auto relative mx-auto flex max-w-3xl"
       >
         <div
           onClick={handleContainerClick}
-          className={cn(
-            "rounded-2xl",
-            "click-focus-input bg-card relative flex w-full flex-col p-3 shadow-xl transition-colors duration-300 ease-in-out hover:cursor-text max-sm:p-2",
-          )}
+          className="rounded-2xl click-focus-input bg-card relative flex w-full flex-col p-3 shadow-xl transition-colors duration-300 ease-in-out hover:cursor-text max-sm:p-2"
         >
           <textarea
             ref={textareaRef}

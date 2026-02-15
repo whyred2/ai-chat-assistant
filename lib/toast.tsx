@@ -90,7 +90,7 @@ export const showToast = {
       loading: string;
       success: string;
       error: string;
-    }
+    },
   ) => {
     return toast.promise(
       promise,
@@ -99,31 +99,7 @@ export const showToast = {
         success: messages.success,
         error: messages.error,
       },
-      defaultOptions
+      defaultOptions,
     );
   },
 };
-
-/**
- * Примеры использования:
- *
- * showToast.success("Сообщение отправлено!");
- * showToast.error("Не удалось отправить сообщение", "Проверьте подключение к интернету");
- * showToast.info("Новое обновление доступно");
- * showToast.warning("История чата будет удалена");
- *
- * const loadingToast = showToast.loading("Генерация изображения...");
- * // После завершения:
- * toast.dismiss(loadingToast);
- * showToast.success("Изображение готово!");
- *
- * // Или используйте promise:
- * showToast.promise(
- *   fetchData(),
- *   {
- *     loading: "Загрузка данных...",
- *     success: "Данные загружены!",
- *     error: "Ошибка загрузки данных"
- *   }
- * );
- */

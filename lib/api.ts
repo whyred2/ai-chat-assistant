@@ -20,14 +20,15 @@ export function withAuth(handler: AuthenticatedHandler) {
       );
     }
 
-    const lastRequest = rateLimitMap.get(sessionId);
+    const rateLimitKey = `${sessionId}:${request.nextUrl.pathname}`;
+    const lastRequest = rateLimitMap.get(rateLimitKey);
     const now = Date.now();
 
-    if (lastRequest && now - lastRequest < 2000) {
-      return errorResponse("Too mamy requests", 429);
+    if (lastRequest && now - lastRequest < 1000) {
+      return errorResponse("Too many requests", 429);
     }
 
-    rateLimitMap.set(sessionId, now);
+    rateLimitMap.set(rateLimitKey, now);
 
     const user = await prisma.user.findUnique({
       where: { sessionId },

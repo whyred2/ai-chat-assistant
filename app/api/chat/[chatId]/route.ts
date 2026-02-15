@@ -13,7 +13,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { chatId } = await params;
 
   const handler = withAuth(async (_request, user) => {
-    const chat = await prisma.chat.findUnique({
+    const chat = (await prisma.chat.findUnique({
       where: { id: chatId, userId: user.id },
       include: {
         messages: {
@@ -26,7 +26,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           },
         },
       },
-    });
+    })) as {
+      id: string;
+      title: string | null;
+      messages: {
+        id: string;
+        role: string;
+        content: string;
+        createdAt: Date;
+      }[];
+    } | null;
 
     if (!chat) {
       return NextResponse.json({ error: "Chat not found" }, { status: 404 });

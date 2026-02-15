@@ -14,9 +14,7 @@ export function ThemeProvider({
   ...props
 }: React.ComponentProps<typeof NextThemesProvider>) {
   return (
-    // 2. Провайдер создает контекст
     <NextThemesProvider {...props}>
-      {/* 3. Наблюдатель теперь имеет доступ к контексту темы */}
       <AccentColorWatcher />
       {children}
     </NextThemesProvider>
