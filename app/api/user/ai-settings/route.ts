@@ -43,7 +43,7 @@ export const POST = withAuth(async (request, user) => {
     }
 
     if (messageHistoryLimit !== undefined) {
-      const limit = Math.min(Math.max(Number(messageHistoryLimit), 10), 50);
+      const limit = Math.min(Math.max(Number(messageHistoryLimit), 10), 30);
       updateData.messageHistoryLimit = limit;
     }
 

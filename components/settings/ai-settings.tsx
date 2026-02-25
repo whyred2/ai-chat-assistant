@@ -77,7 +77,7 @@ export function AISettings({
             <Slider
               id="history-limit"
               min={10}
-              max={50}
+              max={30}
               step={10}
               value={[messageHistoryLimit]}
               onValueChange={([value]) => onMessageHistoryLimitChange(value)}
@@ -88,8 +88,6 @@ export function AISettings({
               <span>10</span>
               <span>20</span>
               <span>30</span>
-              <span>40</span>
-              <span>50</span>
             </div>
           </div>
         </div>
